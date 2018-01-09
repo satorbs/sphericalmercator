@@ -27,11 +27,13 @@ function SphericalMercator(options) {
         c.zc = [];
         c.Ac = [];
         for (var d = 0; d < 30 * CARRY_ZOOM_VALUE; d++) {
+            var mod = (d + 1) % CARRY_ZOOM_VALUE;
+            if (mod === 0) mod = CARRY_ZOOM_VALUE;
             c.Bc.push(size / 360);
             c.Cc.push(size / (2 * Math.PI));
             c.zc.push(size / 2);
             c.Ac.push(size);
-            size *= 2 / CARRY_ZOOM_VALUE;
+            size *= (CARRY_ZOOM_VALUE + mod) / CARRY_ZOOM_VALUE;
         }
     }
     this.Bc = cache[this.size].Bc;

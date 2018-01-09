@@ -7,8 +7,12 @@ var cache = {},
     R2D = 180 / Math.PI,
     // 900913 properties.
     A = 6378137.0,
-    MAXEXTENT = 20037508.342789244;
+    MAXEXTENT = 20037508.342789244,
+    CARRY_ZOOM_VALUE = 10;
 
+function carry(zoom) {
+    return Math.round(zoom * CARRY_ZOOM_VALUE)
+}
 
 // SphericalMercator constructor: precaches calculations
 // for fast tile lookups.
@@ -22,12 +26,12 @@ function SphericalMercator(options) {
         c.Cc = [];
         c.zc = [];
         c.Ac = [];
-        for (var d = 0; d < 30; d++) {
+        for (var d = 0; d < 30 * CARRY_ZOOM_VALUE; d++) {
             c.Bc.push(size / 360);
             c.Cc.push(size / (2 * Math.PI));
             c.zc.push(size / 2);
             c.Ac.push(size);
-            size *= 2;
+            size *= 2 / CARRY_ZOOM_VALUE;
         }
     }
     this.Bc = cache[this.size].Bc;
@@ -41,12 +45,14 @@ function SphericalMercator(options) {
 // - `ll` {Array} `[lon, lat]` array of geographic coordinates.
 // - `zoom` {Number} zoom level.
 SphericalMercator.prototype.px = function(ll, zoom) {
-    var d = this.zc[zoom];
+    var carriedZoom = carry(zoom)
+
+    var d = this.zc[carriedZoom];
     var f = Math.min(Math.max(Math.sin(D2R * ll[1]), -0.9999), 0.9999);
-    var x = Math.round(d + ll[0] * this.Bc[zoom]);
-    var y = Math.round(d + 0.5 * Math.log((1 + f) / (1 - f)) * (-this.Cc[zoom]));
-    (x > this.Ac[zoom]) && (x = this.Ac[zoom]);
-    (y > this.Ac[zoom]) && (y = this.Ac[zoom]);
+    var x = Math.round(d + ll[0] * this.Bc[carriedZoom]);
+    var y = Math.round(d + 0.5 * Math.log((1 + f) / (1 - f)) * (-this.Cc[carriedZoom]));
+    (x > this.Ac[carriedZoom]) && (x = this.Ac[carriedZoom]);
+    (y > this.Ac[carriedZoom]) && (y = this.Ac[carriedZoom]);
     //(x < 0) && (x = 0);
     //(y < 0) && (y = 0);
     return [x, y];
@@ -57,8 +63,10 @@ SphericalMercator.prototype.px = function(ll, zoom) {
 // - `px` {Array} `[x, y]` array of geographic coordinates.
 // - `zoom` {Number} zoom level.
 SphericalMercator.prototype.ll = function(px, zoom) {
-    var g = (px[1] - this.zc[zoom]) / (-this.Cc[zoom]);
-    var lon = (px[0] - this.zc[zoom]) / this.Bc[zoom];
+    var carriedZoom = carry(zoom)
+
+    var g = (px[1] - this.zc[carriedZoom]) / (-this.Cc[carriedZoom]);
+    var lon = (px[0] - this.zc[carriedZoom]) / this.Bc[carriedZoom];
     var lat = R2D * (2 * Math.atan(Math.exp(g)) - 0.5 * Math.PI);
     return [lon, lat];
 };
